@@ -42,7 +42,7 @@ ggplot(stepsperday, aes(x = total.steps)) +
              x = "Total number of steps", y = "Frequency") + theme_bw()
 ```
 
-![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-4-1.png)
+![](figure/unnamed-chunk-4-1.png)
 
 Now for the mean and median per day:
 
@@ -81,7 +81,7 @@ ggplot(stepsperinterval, aes(x=interval, y=mean.steps)) +
         theme_bw()
 ```
 
-![plot of chunk unnamed-chunk-7](figure/unnamed-chunk-7-1.png)
+![](figure/unnamed-chunk-7-1.png)
 
 Find the maximum:
 
@@ -133,7 +133,7 @@ ggplot(filled.stepsperday, aes(x = total.steps)) +
              x = "Total number of steps", y = "Frequency") + theme_bw()
 ```
 
-![plot of chunk unnamed-chunk-12](figure/unnamed-chunk-12-1.png)
+![](figure/unnamed-chunk-12-1.png)
 
 Now for the mean and median per day:
 
@@ -185,4 +185,4 @@ ggplot(average.data, aes(x=interval, y=steps, color = Week.type)) +
         theme_bw()
 ```
 
-![plot of chunk unnamed-chunk-15](figure/unnamed-chunk-15-1.png)
+![](figure/unnamed-chunk-15-1.png)

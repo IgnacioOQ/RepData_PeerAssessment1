@@ -30,7 +30,7 @@ names(stepsperday) <- c("date", "total.steps")
 ```
 
 Lets plot this into a histogram.
-```{r, echo=TRUE}
+```{r, echo=TRUE, fig.width=7, fig.height=6, fig.cap=""}
 library(ggplot2)
 ggplot(stepsperday, aes(x = total.steps)) + 
        geom_histogram(fill = "blue", binwidth = 1000) + 
@@ -55,7 +55,7 @@ names(stepsperinterval) <- c("interval", "mean.steps")
 ```
 
 Plot the data
-```{r, echo=TRUE}
+```{r, echo=TRUE, fig.width=7, fig.height=6, fig.cap=""}
 ggplot(stepsperinterval, aes(x=interval, y=mean.steps)) +   
         geom_line(color="red", size=1) +  
         labs(title="Average Daily Activity Pattern", x="Interval", y="Number of steps") +  
@@ -90,7 +90,7 @@ names(filled.stepsperday) <- c("date", "total.steps")
 ```
 
 Lets plot this into a histogram.
-```{r, echo=TRUE}
+```{r, echo=TRUE, fig.width=7, fig.height=6, fig.cap=""}
 library(ggplot2)
 ggplot(filled.stepsperday, aes(x = total.steps)) + 
        geom_histogram(fill = "chartreuse4", binwidth = 1000) + 
@@ -125,7 +125,7 @@ filled.data$Week.type <- sapply(filled.data$date, wdfunction)
 ```
 
 Now for the plotting:
-```{r}
+```{r, fig.width=7, fig.height=6, fig.cap=""}
 average.data <- aggregate(steps ~ interval + Week.type, filled.data, mean)
 
 ggplot(average.data, aes(x=interval, y=steps, color = Week.type)) + 
