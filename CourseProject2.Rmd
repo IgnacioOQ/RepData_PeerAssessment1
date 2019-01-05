@@ -1,0 +1,256 @@
+---
+title: "Reproducible Research Course Project 2"
+author: "Ignacio Ojea"
+date: "July 26, 2016"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+&nbsp; 
+
+&nbsp; 
+
+# Report on the Population Health and Economic Impact Of Severe Weather Events in US
+
+&nbsp; 
+
+## Introduction
+
+This project is based on information provided by the National Oceanic and Atmospheric Administration’s (NOAA) storm database. This encompasses 37 variables regarding the major weather events in the United States, including type of event, location, time, and in particular an estimation of harm to the population (fatalities and injuries) and to the economy (property and crop damage). The events in the database start in the year 1950 and end in November 2011. The purpose of this analysis is to identify the weather events that inflicted the most human and economic damage.
+
+&nbsp; 
+
+## Synopsis
+
+The analysis of the database revealed that tornados were the most damaging weather events to the population's health - for a total of 97043 between injuries and fatalities. The second worse event in this respect was excessive heat - but quite far away, for a total of 12421 between injuries and fatalities.
+
+With respect to economic consequences, floods were the most significant for a total of $180463144933 in damages between property and crop damages. On second place there are the hurricanes, for a total damage of $90251472810.
+
+The analysis proceeded by (i) downloading the data, (ii) subsetting it and cleaning it for the relevant variables, (iii) aggregating the data so that it is easy to process and plotting it.
+
+&nbsp; 
+
+# Data Processing
+
+&nbsp; 
+
+## Part 1: Loading and preprocessing the data
+
+The first step consists in (a) downloading the file, (b) unzipping it, and (c) read the .cvs into the data table.
+
+```{r, echo = TRUE}
+download.file("https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2", dest="temp.bz2")
+data <- read.csv(bzfile("temp.bz2"), header=TRUE, sep=",", stringsAsFactors=FALSE)
+```
+
+&nbsp; 
+
+## Part 2: Cleaning and subsetting the data
+
+&nbsp; 
+
+### Basics
+
+To simplyfy, I subset only the relevant variables with value > 0: the event types (variable “EVTYPE”), the figures related to population health impacts (variables “Fatalities” and “Injures”“), and the ones corresponding to the economic consequences (variables ”PropDMG“,”PROPDMGEXP“,”CROPDMG" & “CROPDMGEXP”):
+
+```{r, echo = TRUE}
+data2 <- data[,c("EVTYPE", "FATALITIES", "INJURIES", "PROPDMG", "PROPDMGEXP", "CROPDMG", "CROPDMGEXP")]
+```
+
+&nbsp;
+
+Take a quick look at the data available.
+```{r, echo = TRUE}
+summary(data2)
+```
+
+&nbsp; 
+
+Before anything else, notice that the event type variable and some of the economic variables need cleaning and formatting:
+```{r, echo = TRUE}
+length(unique(data2$EVTYPE))
+
+unique(data2$PROPDMGEXP)
+
+unique(data2$CROPDMGEXP)
+```
+
+&nbsp; 
+
+### Cleaning the data
+
+Let us start with the economic variables:
+```{r, echo = TRUE}
+data2$PROP.DMG.EXP[(data2$PROPDMGEXP=='')|(data2$PROPDMGEXP=='-')|(data2$PROPDMGEXP=='?')|(data2$PROPDMGEXP=='+')|(data2$PROPDMGEXP=='0')] <- 0
+data2$PROP.DMG.EXP[(data2$PROPDMGEXP=='1')] <- 1
+data2$PROP.DMG.EXP[(data2$PROPDMGEXP=='2')] <- 2
+data2$PROP.DMG.EXP[(data2$PROPDMGEXP=='3')] <- 3
+data2$PROP.DMG.EXP[(data2$PROPDMGEXP=='4')] <- 4
+data2$PROP.DMG.EXP[(data2$PROPDMGEXP=='5')] <- 5
+data2$PROP.DMG.EXP[(data2$PROPDMGEXP=='6')] <- 6
+data2$PROP.DMG.EXP[(data2$PROPDMGEXP=='7')] <- 7
+data2$PROP.DMG.EXP[(data2$PROPDMGEXP=='8')] <- 8
+data2$PROP.DMG.EXP[(data2$PROPDMGEXP=='H') | (data2$PROPDMGEXP=='h')] <- 2
+data2$PROP.DMG.EXP[(data2$PROPDMGEXP=='K') | (data2$PROPDMGEXP=='k')] <- 3
+data2$PROP.DMG.EXP[(data2$PROPDMGEXP=='M')] <- 6
+data2$PROP.DMG.EXP[(data2$PROPDMGEXP=='B')] <- 9
+  
+data2$CROP.DMG.EXP[(data2$CROPDMGEXP=='')|(data2$CROPDMGEXP=='-')|(data2$CROPDMGEXP=='?')|(data2$CROPDMGEXP=='+')|(data2$CROPDMGEXP=='0')] <- 0
+data2$CROP.DMG.EXP[(data2$CROPDMGEXP=='K')|(data2$CROPDMGEXP=='k')] <- 3
+data2$CROP.DMG.EXP[(data2$CROPDMGEXP=='M')|(data2$CROPDMGEXP=='m')] <- 6
+data2$CROP.DMG.EXP[(data2$CROPDMGEXP=='B')] <- 9
+ 
+#Now find the total cost of property damage
+data2$PROP.DMG.COST <- data2$PROPDMG*10^as.numeric(data2$PROP.DMG.EXP)
+data2$CROP.DMG.COST <- data2$CROPDMG*10^as.numeric(data2$CROP.DMG.EXP)
+```
+
+&nbsp; 
+
+Now allow me to clean up a little bit the variable on event types:
+```{r, echo = TRUE}
+# I start by setting everything to upper case letters
+data2$EVTYPE <- toupper(data2$EVTYPE)
+
+# Then I group categories according to their name
+data2$EVTYPE <- gsub('.*LOW.*TEMPER.*', 'COLD', data2$EVTYPE)
+data2$EVTYPE <- gsub('.*HIGH.*TEMPER.*', 'HEAT', data2$EVTYPE)
+data2$EVTYPE <- gsub('.*HEAT.*', 'HEAT', data2$EVTYPE)
+data2$EVTYPE <- gsub('.*WARM.*', 'HEAT', data2$EVTYPE)
+data2$EVTYPE <- gsub('.*HIGH.*TEMP.*', 'EXTREME HEAT', data2$EVTYPE)
+data2$EVTYPE <- gsub('.*.*RECORD HIGH TEMPERATURES.*', 'EXTREME HEAT', data2$EVTYPE)
+data2$EVTYPE <- gsub('.*FIRE.*', 'FIRE', data2$EVTYPE)
+data2$EVTYPE <- gsub('.*HURRICANE.*', 'HURRICANE', data2$EVTYPE)
+data2$EVTYPE <- gsub('.*RAIN.*', 'RAIN', data2$EVTYPE)
+data2$EVTYPE <- gsub('.*STORM.*', 'STORM', data2$EVTYPE)
+data2$EVTYPE <- gsub('.*FLOOD.*', 'FLOOD', data2$EVTYPE)
+data2$EVTYPE <- gsub('.*WIND.*', 'WIND', data2$EVTYPE)
+data2$EVTYPE <- gsub('.*WND.*', 'WIND', data2$EVTYPE)
+data2$EVTYPE <- gsub('.*TORN.*', 'TORNADO', data2$EVTYPE)
+data2$EVTYPE <- gsub('.*HAIL.*', 'HAIL', data2$EVTYPE)
+data2$EVTYPE <- gsub('.*SNOW.*', 'SNOW', data2$EVTYPE)
+data2$EVTYPE <- gsub('.*CLOUD.*', 'CLOUD', data2$EVTYPE)
+data2$EVTYPE <- gsub('.*MICROBURST.*', 'MICROBURST', data2$EVTYPE)
+data2$EVTYPE <- gsub('.*BLIZZARD.*', 'BLIZZARD', data2$EVTYPE)
+data2$EVTYPE <- gsub('.*COLD.*', 'COLD', data2$EVTYPE)
+data2$EVTYPE <- gsub('.*SNOW.*', 'COLD', data2$EVTYPE)
+data2$EVTYPE <- gsub('.*FREEZ.*', 'COLD', data2$EVTYPE)
+data2$EVTYPE <- gsub('.*LOW TEMPERATURE RECORD.*', 'COLD', data2$EVTYPE)
+data2$EVTYPE <- gsub('.*ICE.*', 'COLD', data2$EVTYPE)
+data2$EVTYPE <- gsub('.*FROST.*', 'COLD', data2$EVTYPE)
+data2$EVTYPE <- gsub('.*LO.*TEMP.*', 'COLD', data2$EVTYPE)
+data2$EVTYPE <- gsub('.*FROST.*', 'COLD', data2$EVTYPE)
+data2$EVTYPE <- gsub('.*HIGH.*TEMPER.*', 'HEAT', data2$EVTYPE)
+data2$EVTYPE <- gsub('.*TORNADO.*', 'TORNADO', data2$EVTYPE)
+data2$EVTYPE <- gsub('.*DRY.*', 'DRY', data2$EVTYPE)
+data2$EVTYPE <- gsub('.*DUST.*', 'DUST', data2$EVTYPE)
+data2$EVTYPE <- gsub('.*RAIN.*', 'RAIN', data2$EVTYPE)
+data2$EVTYPE <- gsub('.*LIGHTNING.*', 'LIGHTNING', data2$EVTYPE)
+data2$EVTYPE <- gsub('.*SUMMARY.*', 'SUMMARY', data2$EVTYPE)
+data2$EVTYPE <- gsub('.*WET.*', 'WET', data2$EVTYPE)
+data2$EVTYPE <- gsub('.*FIRE.*', 'FIRE', data2$EVTYPE)
+data2$EVTYPE <- gsub('.*FOG.*', 'FOG', data2$EVTYPE)
+data2$EVTYPE <- gsub('.*VOLCANIC.*', 'VOLCANIC', data2$EVTYPE)
+data2$EVTYPE <- gsub('.*SURF.*', 'SURF', data2$EVTYPE)
+```
+
+&nbsp;
+
+Lets take a look at the new amount of event types:
+```{r, echo = TRUE}
+length(unique(data2$EVTYPE))
+```
+Looking good!
+
+&nbsp;
+
+## Part 3: Analyzing (aggregating and plotting) the data
+
+&nbsp; 
+
+### Reshaping the data
+Now lets generate two data sets, each with the relevant information to answer one of the questions (considering only the cases in which at least one of the data is different from zero):
+```{r, echo = TRUE}
+#Let me start with health.
+Fatalities.data <- aggregate(x = list(FATALITIES = data2$FATALITIES), by=list(EVENT.TYPE=data2$EVTYPE), FUN=sum, na.rm=TRUE)
+
+Injuries.data <- aggregate(x = list(INJURIES = data2$INJURIES), by=list(EVENT.TYPE=data2$EVTYPE), FUN=sum, na.rm=TRUE)
+
+Health.data <- merge(Fatalities.data,Injuries.data, by="EVENT.TYPE")
+
+Health.data$TOTAL.DAMAGE <- (Health.data$FATALITIES + Health.data$INJURIES)
+    
+Health.data <- Health.data[, c("EVENT.TYPE","TOTAL.DAMAGE", "INJURIES","FATALITIES")]
+
+Health.data <- Health.data[order(Health.data$TOTAL.DAMAGE, decreasing=T),]
+
+#Now for the economic damage.
+
+Property.damage.data <- aggregate(x = list(PROP.DMG = data2$PROP.DMG.COST), by=list(EVENT.TYPE=data2$EVTYPE), FUN=sum, na.rm=TRUE)
+
+Crop.damage.data <- aggregate(x = list(CROP.DMG = data2$CROP.DMG.COST), by=list(EVENT.TYPE=data2$EVTYPE), FUN=sum, na.rm=TRUE)
+
+Economic.data <- merge(Property.damage.data, Crop.damage.data, by = "EVENT.TYPE")
+
+Economic.data$TOTAL.DMG <- (Economic.data$PROP.DMG + Economic.data$CROP.DMG)
+
+Economic.data <- Economic.data[, c("EVENT.TYPE", "TOTAL.DMG", "PROP.DMG", "CROP.DMG")]
+
+Economic.data <- Economic.data[order(Economic.data$TOTAL.DMG, decreasing=T),]
+```
+
+&nbsp;
+
+### Plotting the data
+
+&nbsp; 
+
+#### Basics
+Now for plotting the results.
+I need some libraries for this part:
+```{r, echo = TRUE}
+library(ggplot2)
+library(reshape2)
+```
+
+&nbsp;
+
+Let us now look at the top ten events in each category, ordered by the total damage they inflicted.
+```{r, echo = TRUE}
+head(Health.data,10)
+head(Economic.data,10)
+```
+
+&nbsp;
+
+#### Plotting
+Now for the plotting. First the Health Chart:
+```{r, fig.width=11, fig.height=6, fig.cap=""}
+Temp.health.data <- melt(head(Health.data, 10), id.vars="EVENT.TYPE")
+
+Health.Chart <- ggplot(Temp.health.data, aes(x=reorder(EVENT.TYPE, -value), y=value, fill = Damage)) +  geom_bar(stat="identity", aes(fill=variable), position="dodge") + xlab("Event Type") + ylab("Number of Fatalities, Injures and Totals") + ggtitle("Health Impact of the Top 10 Weather Events in US") 
+  
+print(Health.Chart)
+```
+
+&nbsp;
+
+And now for the Economic Chart:
+```{r, fig.width=11, fig.height=6, fig.cap=""}
+Temp.econ.data <- melt(head(Economic.data, 10), id.vars="EVENT.TYPE")
+
+Economic.Chart <- ggplot(Temp.econ.data, aes(x=reorder(EVENT.TYPE, -value), y=value, fill = Damage)) +  geom_bar(stat="identity", aes(fill=variable), position="dodge") + xlab("Event Type") + ylab("Cost of the Economic Damage") + ggtitle("Economic Impact of the Top 10 Weather Events in US") 
+  
+print(Economic.Chart)
+```
+
+&nbsp;
+
+# Results
+
+The analysis of the database revealed that **tornados** were the most damaging weather events to the population's health - for a total of 97043 between injuries and fatalities. The second worse event in this respect was excessive **heat** - but quite far away, for a total of 12421 between injuries and fatalities. Excessive Wind (10281), floods (10126) and storms (7325) follow respectively.
+
+With respect to economic impact, **floods** were the most significant for a total of $180463144933 in damages between property and crop damages. On second place there are the **hurricanes**, for a total damage of $90251472810. Storms ($79668064754), tornados ($57406779946) and hail ($18777980986) follow respectively.
+
+&nbsp;
